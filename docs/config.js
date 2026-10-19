@@ -3,7 +3,7 @@
 window.MAXWELL_CONFIG = {
   // URL de la aplicación web de Google Apps Script (termina en /exec).
   // Vacía: cada resultado se guarda solo en el navegador del participante.
-  sheetsUrl: '',
+  sheetsUrl: 'https://script.google.com/macros/s/AKfycbw88wJ8B8Ad_3fM_Lr2QR8C6H-Mhm78HMmHDCeSXaFhIhR9D-X_odnIbaNJtQab1I87/exec',
   // PIN del panel del facilitador. Debe coincidir con el PIN de apps-script-hoja-google.gs.
   facilitatorPin: '2026',
   // true: cada tarjeta del cuestionario usa el color de su afirmación.
