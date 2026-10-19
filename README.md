@@ -1,25 +1,48 @@
-# CODING AGENTS: READ THIS FIRST
+# Maxwell Coach · Liderazgo académico (UP QROO)
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+Cuestionario tipo Tinder de 50 afirmaciones que identifica el estilo de liderazgo académico en 4 colores: **Rojo Directivo, Azul Analítico, Amarillo Innovador y Verde Empoderador**.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+La app está en `docs/` y es un sitio estático (HTML, CSS y JavaScript, sin dependencias ni compilación). Funciona en celular y en computadora.
 
-## What you should do — IMPORTANT
+## Publicar en GitHub Pages
 
-**Read the chat transcripts first.** There are 2 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+1. En el repo: **Settings → Pages**.
+2. En **Source** elige **Deploy from a branch**, rama `main`, carpeta `/docs`, y guarda.
+3. En uno o dos minutos la app queda en `https://<tu-usuario>.github.io/<nombre-del-repo>/`. Esa es la liga para los participantes.
 
-**Read `project/Maxwell Coach.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+## Ajustes (`docs/config.js`)
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+| Ajuste | Qué hace | Valor inicial |
+|---|---|---|
+| `sheetsUrl` | URL de la hoja de Google (termina en `/exec`). Vacía = cada resultado queda solo en el navegador del participante. | `''` |
+| `facilitatorPin` | PIN del panel del facilitador. | `'2026'` |
+| `colorCards` | Las tarjetas usan el color de cada afirmación. | `false` |
+| `showTimer` | Muestra la cuenta regresiva. | `true` |
+| `timeLimit` | Duración del cuestionario en segundos. | `240` |
 
-## About the design files
+Puedes editar `config.js` directamente en GitHub (ícono del lápiz); Pages se actualiza solo.
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+## Resultados del grupo en Google Sheets
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+1. Crea una hoja de cálculo en Google Sheets → **Extensiones → Apps Script**.
+2. Pega el contenido de `docs/apps-script-hoja-google.gs` y cambia el PIN.
+3. **Implementar → Nueva implementación → Aplicación web**. Ejecutar como: Yo. Acceso: Cualquier persona.
+4. Copia la URL que termina en `/exec` y pégala en `sheetsUrl` de `docs/config.js`. Usa el mismo PIN en `facilitatorPin`.
 
-## Bundle contents
+Cada sesión guarda una fila anónima: fecha, grupo, estilo más alto, estilo más bajo, los 4 porcentajes, afirmaciones respondidas, segundos y si se agotó el tiempo. El PIN de la app solo oculta el panel; la protección real de los datos es el PIN del script.
 
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `UPQROO Maxwell Coach academic leadership app` project files (HTML prototypes, assets, components)
+## Flujo
+
+Inicio (nombre y código de grupo) → 3 tarjetas de instrucciones → cuenta 3‑2‑1 → cuestionario (deslizar, botones ✓/✕ o flechas ← →; pausa; 4 minutos) → pantalla de cierre → perfil con gráfica → página de cada estilo → **Descargar resultados en PDF** (estilo más alto y más bajo).
+
+- **Puntaje:** una afirmación directa suma con "De acuerdo"; una negativa suma con "En desacuerdo". Cada estilo = puntos ÷ afirmaciones respondidas de ese estilo.
+- **Orden:** intercalado R1, A1, Y1, G1, R2… para no agrupar colores.
+- **Panel del facilitador:** enlace bajo "Comenzar". Promedio por estilo, conteo de estilo más alto y más bajo, últimas sesiones y descarga CSV.
+
+## Probar en tu computadora
+
+Abre `docs/index.html` en el navegador. Para probar el envío a Google Sheets, sírvelo con un servidor local, por ejemplo `npx serve docs`.
+
+## Otros archivos
+
+- `project/` y `chats/`: diseño original de Claude Design y sus conversaciones (`HANDOFF.md` describe el paquete).
