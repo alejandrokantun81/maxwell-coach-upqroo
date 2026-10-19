@@ -85,7 +85,8 @@ h1,h2,p{margin:0}
 .wedge{cursor:pointer;transition:opacity 150ms}
 .style-row{display:grid;grid-template-columns:14px minmax(0,1fr) 44px 16px;align-items:center;gap:12px;padding:16px 0;border:0;border-bottom:1px solid var(--gray-200);background:transparent;cursor:pointer;text-align:left;font-family:var(--font-sans);width:100%}
 
-select.group-select{height:48px;border-radius:12px;border:1.5px solid var(--gray-200);padding:0 14px;font:600 15px var(--font-sans);background:var(--white);color:var(--rich-black)}
+/* Lista de grupos del panel */
+.group-item{display:grid;grid-template-columns:minmax(0,1fr) auto 16px;align-items:center;gap:12px;padding:16px 4px;border:0;border-bottom:1px solid var(--gray-200);background:transparent;cursor:pointer;text-align:left;font-family:var(--font-sans);width:100%}
 
 /* Hover solo con cursor, para que no se quede pegado en pantallas táctiles */
 @media (hover:hover){
@@ -99,6 +100,7 @@ select.group-select{height:48px;border-radius:12px;border:1.5px solid var(--gray
   .answer-btn.yes:hover{background:var(--orange-600)}
   .wedge:hover{opacity:.85}
   .style-row:hover{background:var(--orange-50)}
+  .group-item:hover{background:var(--orange-50)}
 }
 
 /* Reporte PDF */

@@ -39,7 +39,7 @@ Inicio (nombre y código de grupo) → 3 tarjetas de instrucciones → cuenta 3�
 
 - **Puntaje:** una afirmación directa suma con "De acuerdo"; una negativa suma con "En desacuerdo". Cada estilo = puntos ÷ afirmaciones respondidas de ese estilo.
 - **Orden:** intercalado R1, A1, Y1, G1, R2… para no agrupar colores.
-- **Panel del facilitador:** enlace bajo "Comenzar". Promedio por estilo, conteo de estilo más alto y más bajo, últimas sesiones, descarga CSV y **borrar datos** del grupo elegido (o de todos), con confirmación. Borra en ese dispositivo y en la hoja de Google.
+- **Panel del facilitador:** enlace bajo "Comenzar". Después del PIN, primero eliges qué código de grupo ver (o todos). Promedio por estilo, conteo de estilo más alto y más bajo, últimas sesiones, descarga CSV y **borrar datos** del grupo elegido (o de todos), con confirmación. Borra en ese dispositivo y en la hoja de Google.
 
 ## Probar en tu computadora
 

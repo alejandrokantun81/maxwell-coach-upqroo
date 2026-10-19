@@ -140,7 +140,7 @@ const fourColors = (size, gap, r) => `
 const S = {
   screen: 'welcome', name: '', nameError: '', group: '', introStep: 0, count: 3,
   idx: 0, answers: [], exiting: 0, secs: 0, timerOn: false, paused: false, timedOut: false,
-  detail: 0, pinVal: '', pinError: '', rows: [], panelGroup: 'TODOS', loading: false, remoteErr: false,
+  detail: 0, pinVal: '', pinError: '', rows: [], panelGroup: null, loading: false, remoteErr: false,
   confirmDelete: false, deleting: false, deleteMsg: ''
 };
 let timeout = null, drag = null, rendered = null;
@@ -240,7 +240,7 @@ function deleteGroup() {
     : Promise.resolve();
   return remote.then(loadPanel).then(() => {
     const left = S.rows.filter(match).length;
-    set({ deleting: false, panelGroup: left ? group : 'TODOS',
+    set({ deleting: false, panelGroup: left ? group : null,
       deleteMsg: left ? 'La hoja de Google no borró los datos. Actualiza el script con la versión nueva de apps-script-hoja-google.gs.' : 'Datos borrados.' });
   });
 }
@@ -530,20 +530,65 @@ function pinHTML() {
   </div>`;
 }
 
-function panelHTML() {
-  const all = S.rows;
-  const groups = ['TODOS', ...[...new Set(all.map(r => r.group))].sort()];
-  if (!groups.includes(S.panelGroup)) S.panelGroup = 'TODOS';
-  const rs = panelRows(), n = rs.length;
-  const avg = k => n ? Math.round(rs.reduce((a, r) => a + (+r[k] || 0), 0) / n) : 0;
-  const shortOf = nm => (STYLES.find(x => x.name === nm) || {}).short || nm;
-  const fmt = ts => { const dt = new Date(ts); return isNaN(dt) ? '' : dt.toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
-  const last = [...rs].sort((a, b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 6);
-  const pending = CFG.sheetsUrl ? all.filter(r => r.synced === false).length : 0;
-  const source = !CFG.sheetsUrl ? 'Solo este dispositivo. Agrega la URL de la hoja de Google en config.js para reunir a todos.'
+function sourceText() {
+  return !CFG.sheetsUrl ? 'Solo este dispositivo. Agrega la URL de la hoja de Google en config.js para reunir a todos.'
     : S.loading ? 'Actualizando desde la hoja de Google…'
     : S.remoteErr ? 'No se pudo leer la hoja. Se muestran los datos de este dispositivo.'
     : 'Hoja de Google y este dispositivo';
+}
+const fmtDate = ts => { const dt = new Date(ts); return isNaN(dt) ? '' : dt.toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+const sessions = n => `${n} ${n === 1 ? 'sesión' : 'sesiones'}`;
+
+// Primer paso del panel: elegir el código de grupo que se quiere ver
+function groupPickerHTML() {
+  const all = S.rows;
+  const groups = [...new Set(all.map(r => r.group))].sort().map(g => {
+    const rs = all.filter(r => r.group === g);
+    return { g, n: rs.length, last: rs.map(r => String(r.ts)).sort().pop() };
+  });
+  const item = (value, title, sub, n) => `
+      <button class="group-item" data-act="pickGroup" data-g="${esc(value)}">
+        <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+          <span style="font:800 17px var(--font-sans);letter-spacing:-0.01em;color:var(--rich-black);overflow-wrap:anywhere">${title}</span>
+          <span style="font:500 12px var(--font-sans);color:var(--text-muted)">${sub}</span>
+        </span>
+        <span style="font:800 15px var(--font-sans);color:var(--guinda);font-variant-numeric:tabular-nums;white-space:nowrap">${n}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9C9C9C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>`;
+  return `
+  <div class="scroll" style="background:var(--white);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 24px 16px;border-bottom:1px solid var(--gray-200)">
+      <span style="font:800 17px var(--font-sans);letter-spacing:-0.02em;color:var(--rich-black)">Panel del grupo</span>
+      <button class="btn btn-sm btn-outline" data-act="closePanel">Salir</button>
+    </div>
+    <div style="padding:20px 24px 28px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span class="eyebrow" style="color:var(--guinda)">Paso 1 · Elige un grupo</span>
+        <h2 style="font:800 26px/1.15 var(--font-sans);letter-spacing:-0.02em;color:var(--rich-black)">¿Qué datos quieres ver?</h2>
+        <p style="font:500 14px/1.5 var(--font-sans);color:var(--text-muted)">Cada código es el que escribieron los participantes al iniciar.</p>
+        <span style="font:500 12px/1.4 var(--font-sans);color:var(--text-muted)">${sourceText()}</span>
+      </div>
+      ${S.deleteMsg ? `<span style="font:600 13px/1.4 var(--font-sans);color:var(--text-body);background:var(--gray-100);border-radius:12px;padding:10px 14px">${S.deleteMsg}</span>` : ''}
+      ${groups.length ? `
+      <div style="display:flex;flex-direction:column">
+        ${groups.map(x => item(x.g, esc(x.g), 'Última: ' + fmtDate(x.last), sessions(x.n))).join('')}
+        ${groups.length > 1 ? item('TODOS', 'Todos los grupos', groups.length + ' códigos', sessions(all.length)) : ''}
+      </div>` : `
+      <div style="background:var(--gray-100);border-radius:16px;padding:20px;font:500 14px/1.5 var(--font-sans);color:var(--text-muted)">${S.loading ? 'Cargando grupos…' : 'Aún no hay sesiones registradas.'}</div>`}
+      <button class="btn btn-outline btn-full" data-act="refresh">Actualizar</button>
+    </div>
+  </div>`;
+}
+
+function panelHTML() {
+  if (S.panelGroup === null) return groupPickerHTML();
+  const all = S.rows;
+  const rs = panelRows(), n = rs.length;
+  const avg = k => n ? Math.round(rs.reduce((a, r) => a + (+r[k] || 0), 0) / n) : 0;
+  const shortOf = nm => (STYLES.find(x => x.name === nm) || {}).short || nm;
+  const fmt = fmtDate;
+  const last = [...rs].sort((a, b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 6);
+  const pending = CFG.sheetsUrl ? all.filter(r => r.synced === false).length : 0;
   const grid = 'display:grid;grid-template-columns:minmax(0,1fr) 44px 44px 44px;gap:6px';
   return `
   <div class="scroll" style="background:var(--white);display:flex;flex-direction:column">
@@ -553,11 +598,12 @@ function panelHTML() {
     </div>
     <div style="padding:20px 24px 28px;display:flex;flex-direction:column;gap:22px">
       <div style="display:flex;flex-direction:column;gap:8px">
-        <label class="eyebrow" for="mx-group" style="color:var(--guinda)">Grupo</label>
-        <select id="mx-group" class="group-select" data-change="panelGroup">
-          ${groups.map(g => `<option value="${esc(g)}"${g === S.panelGroup ? ' selected' : ''}>${esc(g)}</option>`).join('')}
-        </select>
-        <span style="font:500 12px/1.4 var(--font-sans);color:var(--text-muted)">${source}</span>
+        <span class="eyebrow" style="color:var(--guinda)">Grupo</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span data-ref="groupName" style="font:800 24px/1.15 var(--font-sans);letter-spacing:-0.02em;color:var(--rich-black);overflow-wrap:anywhere">${S.panelGroup === 'TODOS' ? 'Todos los grupos' : esc(S.panelGroup)}</span>
+          <button class="btn btn-sm btn-outline" data-act="changeGroup" style="flex:none">Cambiar grupo</button>
+        </div>
+        <span style="font:500 12px/1.4 var(--font-sans);color:var(--text-muted)">${sourceText()}</span>
       </div>
       <div style="display:flex;align-items:baseline;gap:10px">
         <span style="font:800 56px/1 var(--font-sans);letter-spacing:-0.04em;color:var(--rich-black)">${n}</span>
@@ -758,6 +804,8 @@ const actions = {
   downloadCsv,
   refresh: loadPanel,
   resend: () => Promise.all(S.rows.filter(r => r.synced === false).map(push)),
+  pickGroup: el => { set({ panelGroup: el.dataset.g, confirmDelete: false, deleteMsg: '' }); view.firstElementChild.scrollTop = 0; },
+  changeGroup: () => { set({ panelGroup: null, confirmDelete: false, deleteMsg: '' }); view.firstElementChild.scrollTop = 0; },
   askDelete: () => set({ confirmDelete: true, deleteMsg: '' }),
   cancelDelete: () => set({ confirmDelete: false }),
   deleteGroup
@@ -776,7 +824,7 @@ view.addEventListener('submit', e => {
     if (S.name.trim()) go('intro'); else set({ nameError: 'Escribe tu nombre para continuar' });
   } else if (e.target.dataset.form === 'pin') {
     if (S.pinVal.trim() !== String(CFG.facilitatorPin)) return set({ pinError: 'PIN incorrecto' });
-    set({ screen: 'panel', panelGroup: 'TODOS', confirmDelete: false, deleteMsg: '' });
+    set({ screen: 'panel', panelGroup: null, confirmDelete: false, deleteMsg: '' });
     loadPanel();
   }
 });
@@ -793,10 +841,6 @@ view.addEventListener('input', e => {
     const err = field.querySelector('.err');
     if (err) err.remove();
   }
-});
-
-view.addEventListener('change', e => {
-  if (e.target.dataset.change === 'panelGroup') set({ panelGroup: e.target.value, confirmDelete: false, deleteMsg: '' });
 });
 
 view.addEventListener('pointerdown', e => {
