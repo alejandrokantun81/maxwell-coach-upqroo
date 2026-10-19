@@ -225,7 +225,8 @@ function loadPanel() {
   return fetch(url + (url.includes('?') ? '&' : '?') + 'pin=' + encodeURIComponent(S.pinVal.trim())).then(r => r.json()).then(remote => {
     if (!Array.isArray(remote)) throw new Error('formato');
     const map = new Map(loadLocal().map(r => [r.id, r]));
-    remote.forEach(r => map.set(String(r.id), { ...r, id: String(r.id), rojo: +r.rojo, azul: +r.azul, amarillo: +r.amarillo, verde: +r.verde, synced: true }));
+    // Ignora filas incompletas (sin id o sin estilo), por ejemplo las que dejó un script anterior
+    remote.filter(r => r && r.id !== '' && r.id != null && r.top).forEach(r => map.set(String(r.id), { ...r, id: String(r.id), rojo: +r.rojo, azul: +r.azul, amarillo: +r.amarillo, verde: +r.verde, synced: true }));
     set({ rows: [...map.values()], loading: false });
   }).catch(() => set({ loading: false, remoteErr: true }));
 }
@@ -235,14 +236,23 @@ function deleteGroup() {
   const match = r => group === 'TODOS' || r.group === group;
   saveLocal(loadLocal().filter(r => !match(r)));
   set({ confirmDelete: false, deleting: true, deleteMsg: '' });
-  const remote = url
-    ? fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'borrar', pin: S.pinVal.trim(), group }) }).catch(() => {})
-    : Promise.resolve();
-  return remote.then(loadPanel).then(() => {
+  // Se borra con GET para poder leer la respuesta. Un script anterior responde con la lista de sesiones.
+  const remote = !url ? Promise.resolve('ok')
+    : fetch(url + (url.includes('?') ? '&' : '?') + 'pin=' + encodeURIComponent(S.pinVal.trim()) + '&borrar=' + encodeURIComponent(group))
+      .then(r => r.json())
+      .then(res => Array.isArray(res) ? 'viejo' : res && res.ok ? 'ok' : res && res.error === 'pin' ? 'pin' : 'error')
+      .catch(() => 'red');
+  return remote.then(status => loadPanel().then(() => {
     const left = S.rows.filter(match).length;
-    set({ deleting: false, panelGroup: left ? group : null,
-      deleteMsg: left ? 'La hoja de Google no borró los datos. Actualiza el script con la versión nueva de apps-script-hoja-google.gs.' : 'Datos borrados.' });
-  });
+    const msg = {
+      ok: left ? 'Se borraron los datos, pero aún aparecen algunas sesiones. Toca Actualizar.' : 'Datos borrados.',
+      viejo: 'La hoja de Google no borró los datos: tu script de Apps Script es una versión anterior. Pega el código nuevo de apps-script-hoja-google.gs y publica una versión nueva (Implementar → Administrar implementaciones → Editar → Nueva versión).',
+      pin: 'La hoja de Google rechazó el PIN. El PIN del script debe ser el mismo que el de la app.',
+      error: 'La hoja de Google no pudo borrar los datos. Intenta de nuevo.',
+      red: 'No hubo conexión con la hoja de Google. Revisa tu internet e intenta de nuevo.'
+    }[status];
+    set({ deleting: false, panelGroup: left ? group : null, deleteMsg: msg });
+  }));
 }
 function csv(rows) {
   const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';

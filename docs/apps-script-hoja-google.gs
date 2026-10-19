@@ -25,12 +25,13 @@ function hoja_() {
 }
 
 function doPost(e) {
+  const r = JSON.parse(e.postData.contents);
+  if (r.action === 'borrar') return ContentService.createTextOutput(JSON.stringify(borrar_(hoja_(), r.pin, r.group)));
+  if (!r.id || !r.top) return ContentService.createTextOutput('ignorado');
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const r = JSON.parse(e.postData.contents);
     const sh = hoja_();
-    if (r.action === 'borrar') return borrar_(sh, r);
     const n = sh.getLastRow() - 1;
     const ids = n > 0 ? sh.getRange(2, 1, n, 1).getValues().map(f => String(f[0])) : [];
     if (ids.indexOf(String(r.id)) === -1) sh.appendRow(CAMPOS.map(c => r[c]));
@@ -41,19 +42,29 @@ function doPost(e) {
 }
 
 // Borra las filas de un grupo, o todas si el grupo es "TODOS". Requiere el PIN.
-function borrar_(sh, r) {
-  if (String(r.pin) !== PIN) return ContentService.createTextOutput('pin');
-  const n = sh.getLastRow() - 1;
-  if (n > 0) {
+// También quita filas incompletas (sin id o sin estilo), que no son sesiones válidas.
+function borrar_(sh, pin, grupo) {
+  if (String(pin) !== PIN) return { ok: false, error: 'pin' };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const n = sh.getLastRow() - 1;
+    if (n <= 0) return { ok: true, borradas: 0 };
     const filas = sh.getRange(2, 1, n, CAMPOS.length).getValues();
-    const quedan = r.group === 'TODOS' ? [] : filas.filter(f => String(f[2]) !== String(r.group));
+    const valida = f => String(f[0]) !== '' && String(f[3]) !== '';
+    const quedan = grupo === 'TODOS' ? [] : filas.filter(f => valida(f) && String(f[2]) !== String(grupo));
     sh.getRange(2, 1, n, CAMPOS.length).clearContent();
     if (quedan.length) sh.getRange(2, 1, quedan.length, CAMPOS.length).setValues(quedan);
+    return { ok: true, borradas: n - quedan.length };
+  } finally {
+    lock.releaseLock();
   }
-  return ContentService.createTextOutput('ok');
 }
 
 function doGet(e) {
+  if (e.parameter.borrar) {
+    return ContentService.createTextOutput(JSON.stringify(borrar_(hoja_(), e.parameter.pin, e.parameter.borrar))).setMimeType(ContentService.MimeType.JSON);
+  }
   const salida = [];
   if (e.parameter.pin === PIN) {
     const sh = hoja_();
