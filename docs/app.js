@@ -576,6 +576,7 @@ function groupPickerHTML() {
       </div>` : `
       <div style="background:var(--gray-100);border-radius:16px;padding:20px;font:500 14px/1.5 var(--font-sans);color:var(--text-muted)">${S.loading ? 'Cargando grupos…' : 'Aún no hay sesiones registradas.'}</div>`}
       <button class="btn btn-outline btn-full" data-act="refresh">Actualizar</button>
+      ${groups.length ? `<span style="font:500 12px/1.4 var(--font-sans);color:var(--text-muted)">Para borrar datos, abre un grupo y usa el botón <strong style="color:var(--danger)">Borrar datos</strong> que aparece arriba.</span>` : ''}
     </div>
   </div>`;
 }
@@ -603,6 +604,7 @@ function panelHTML() {
           <span data-ref="groupName" style="font:800 24px/1.15 var(--font-sans);letter-spacing:-0.02em;color:var(--rich-black);overflow-wrap:anywhere">${S.panelGroup === 'TODOS' ? 'Todos los grupos' : esc(S.panelGroup)}</span>
           <button class="btn btn-sm btn-outline" data-act="changeGroup" style="flex:none">Cambiar grupo</button>
         </div>
+        <button class="btn btn-sm btn-outline btn-danger-outline" data-act="jumpDelete"${n ? '' : ' disabled'} style="align-self:flex-start">Borrar datos</button>
         <span style="font:500 12px/1.4 var(--font-sans);color:var(--text-muted)">${sourceText()}</span>
       </div>
       <div style="display:flex;align-items:baseline;gap:10px">
@@ -807,6 +809,11 @@ const actions = {
   pickGroup: el => { set({ panelGroup: el.dataset.g, confirmDelete: false, deleteMsg: '' }); view.firstElementChild.scrollTop = 0; },
   changeGroup: () => { set({ panelGroup: null, confirmDelete: false, deleteMsg: '' }); view.firstElementChild.scrollTop = 0; },
   askDelete: () => set({ confirmDelete: true, deleteMsg: '' }),
+  jumpDelete: () => {
+    set({ confirmDelete: true, deleteMsg: '' });
+    const box = view.querySelector('[role="alertdialog"]');
+    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  },
   cancelDelete: () => set({ confirmDelete: false }),
   deleteGroup
 };
