@@ -140,7 +140,8 @@ const fourColors = (size, gap, r) => `
 const S = {
   screen: 'welcome', name: '', nameError: '', group: '', introStep: 0, count: 3,
   idx: 0, answers: [], exiting: 0, secs: 0, timerOn: false, paused: false, timedOut: false,
-  detail: 0, pinVal: '', pinError: '', rows: [], panelGroup: 'TODOS', loading: false, remoteErr: false
+  detail: 0, pinVal: '', pinError: '', rows: [], panelGroup: 'TODOS', loading: false, remoteErr: false,
+  confirmDelete: false, deleting: false, deleteMsg: ''
 };
 let timeout = null, drag = null, rendered = null;
 const view = document.getElementById('view');
@@ -220,13 +221,28 @@ function push(rec) {
 function loadPanel() {
   const url = CFG.sheetsUrl;
   set({ rows: loadLocal(), loading: !!url, remoteErr: false });
-  if (!url) return;
-  fetch(url + (url.includes('?') ? '&' : '?') + 'pin=' + encodeURIComponent(S.pinVal.trim())).then(r => r.json()).then(remote => {
+  if (!url) return Promise.resolve();
+  return fetch(url + (url.includes('?') ? '&' : '?') + 'pin=' + encodeURIComponent(S.pinVal.trim())).then(r => r.json()).then(remote => {
     if (!Array.isArray(remote)) throw new Error('formato');
     const map = new Map(loadLocal().map(r => [r.id, r]));
     remote.forEach(r => map.set(String(r.id), { ...r, id: String(r.id), rojo: +r.rojo, azul: +r.azul, amarillo: +r.amarillo, verde: +r.verde, synced: true }));
     set({ rows: [...map.values()], loading: false });
   }).catch(() => set({ loading: false, remoteErr: true }));
+}
+// Borra las sesiones del grupo elegido (o todas) en este dispositivo y en la hoja de Google
+function deleteGroup() {
+  const group = S.panelGroup, url = CFG.sheetsUrl;
+  const match = r => group === 'TODOS' || r.group === group;
+  saveLocal(loadLocal().filter(r => !match(r)));
+  set({ confirmDelete: false, deleting: true, deleteMsg: '' });
+  const remote = url
+    ? fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'borrar', pin: S.pinVal.trim(), group }) }).catch(() => {})
+    : Promise.resolve();
+  return remote.then(loadPanel).then(() => {
+    const left = S.rows.filter(match).length;
+    set({ deleting: false, panelGroup: left ? group : 'TODOS',
+      deleteMsg: left ? 'La hoja de Google no borró los datos. Actualiza el script con la versión nueva de apps-script-hoja-google.gs.' : 'Datos borrados.' });
+  });
 }
 function csv(rows) {
   const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
@@ -580,6 +596,20 @@ function panelHTML() {
         <button class="btn btn-outline btn-full" data-act="refresh">Actualizar</button>
         ${pending ? `<button class="btn btn-outline btn-full" data-act="resend">Reenviar ${pending} pendiente${pending === 1 ? '' : 's'} a la hoja</button>` : ''}
       </div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1px solid var(--gray-200)">
+        <span class="eyebrow" style="color:var(--danger)">Borrar datos</span>
+        ${S.confirmDelete ? `
+        <div role="alertdialog" aria-labelledby="mx-del-q" style="background:#FDECEC;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px">
+          <span id="mx-del-q" style="font:700 15px/1.4 var(--font-sans);color:var(--rich-black)">¿Borrar ${n} ${n === 1 ? 'sesión' : 'sesiones'} de ${S.panelGroup === 'TODOS' ? 'todos los grupos' : 'el grupo ' + esc(S.panelGroup)}?</span>
+          <span style="font:500 13px/1.45 var(--font-sans);color:var(--text-body)">Se borran de este dispositivo${CFG.sheetsUrl ? ' y de la hoja de Google' : ''}. No se puede deshacer. Si los quieres conservar, descarga antes el CSV.</span>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-outline" data-act="cancelDelete" style="flex:1">Cancelar</button>
+            <button class="btn btn-danger" data-act="deleteGroup" style="flex:1">Sí, borrar</button>
+          </div>
+        </div>` : `
+        <button class="btn btn-outline btn-full btn-danger-outline" data-act="askDelete"${n && !S.deleting ? '' : ' disabled'}>${S.deleting ? 'Borrando…' : S.panelGroup === 'TODOS' ? 'Borrar todos los datos' : 'Borrar datos de ' + esc(S.panelGroup)}</button>`}
+        ${S.deleteMsg ? `<span style="font:500 12px/1.4 var(--font-sans);color:var(--text-muted)">${S.deleteMsg}</span>` : ''}
+      </div>
     </div>
   </div>`;
 }
@@ -727,7 +757,10 @@ const actions = {
   closePanel: () => go('welcome'),
   downloadCsv,
   refresh: loadPanel,
-  resend: () => Promise.all(S.rows.filter(r => r.synced === false).map(push))
+  resend: () => Promise.all(S.rows.filter(r => r.synced === false).map(push)),
+  askDelete: () => set({ confirmDelete: true, deleteMsg: '' }),
+  cancelDelete: () => set({ confirmDelete: false }),
+  deleteGroup
 };
 
 view.addEventListener('click', e => {
@@ -743,7 +776,7 @@ view.addEventListener('submit', e => {
     if (S.name.trim()) go('intro'); else set({ nameError: 'Escribe tu nombre para continuar' });
   } else if (e.target.dataset.form === 'pin') {
     if (S.pinVal.trim() !== String(CFG.facilitatorPin)) return set({ pinError: 'PIN incorrecto' });
-    set({ screen: 'panel', panelGroup: 'TODOS' });
+    set({ screen: 'panel', panelGroup: 'TODOS', confirmDelete: false, deleteMsg: '' });
     loadPanel();
   }
 });
@@ -763,7 +796,7 @@ view.addEventListener('input', e => {
 });
 
 view.addEventListener('change', e => {
-  if (e.target.dataset.change === 'panelGroup') set({ panelGroup: e.target.value });
+  if (e.target.dataset.change === 'panelGroup') set({ panelGroup: e.target.value, confirmDelete: false, deleteMsg: '' });
 });
 
 view.addEventListener('pointerdown', e => {

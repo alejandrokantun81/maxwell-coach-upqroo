@@ -29,6 +29,8 @@ Puedes editar `config.js` directamente en GitHub (ícono del lápiz); Pages se a
 3. **Implementar → Nueva implementación → Aplicación web**. Ejecutar como: Yo. Acceso: Cualquier persona.
 4. Copia la URL que termina en `/exec` y pégala en `sheetsUrl` de `docs/config.js`. Usa el mismo PIN en `facilitatorPin`.
 
+Si actualizas el script (por ejemplo, para poder borrar datos desde el panel): pega el código nuevo y ve a **Implementar → Administrar implementaciones → Editar (lápiz) → Versión: Nueva versión → Implementar**. Así la URL `/exec` no cambia.
+
 Cada sesión guarda una fila anónima: fecha, grupo, estilo más alto, estilo más bajo, los 4 porcentajes, afirmaciones respondidas, segundos y si se agotó el tiempo. El PIN de la app solo oculta el panel; la protección real de los datos es el PIN del script.
 
 ## Flujo
@@ -37,7 +39,7 @@ Inicio (nombre y código de grupo) → 3 tarjetas de instrucciones → cuenta 3�
 
 - **Puntaje:** una afirmación directa suma con "De acuerdo"; una negativa suma con "En desacuerdo". Cada estilo = puntos ÷ afirmaciones respondidas de ese estilo.
 - **Orden:** intercalado R1, A1, Y1, G1, R2… para no agrupar colores.
-- **Panel del facilitador:** enlace bajo "Comenzar". Promedio por estilo, conteo de estilo más alto y más bajo, últimas sesiones y descarga CSV.
+- **Panel del facilitador:** enlace bajo "Comenzar". Promedio por estilo, conteo de estilo más alto y más bajo, últimas sesiones, descarga CSV y **borrar datos** del grupo elegido (o de todos), con confirmación. Borra en ese dispositivo y en la hoja de Google.
 
 ## Probar en tu computadora
 
